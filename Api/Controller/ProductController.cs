@@ -2,6 +2,7 @@ using System.Net;
 using Api.Data;
 using Api.Model;
 using Api.ModelDto;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -119,6 +120,81 @@ namespace Api.Controller
                     ErrorMessages = { "Что-то пошло не так", ex.Message }
                 });
             }
+        }
+        [HttpPut]
+        public async Task<ActionResult<ResponseServer>> UpadteProduct(
+        int id, [FromBody] ProductUpdateDto productUpdateDto
+        )
+        {
+           try
+           {
+                if (ModelState.IsValid)
+                {
+                    if (productUpdateDto == null || productUpdateDto.Id != id)
+                    {
+                        return BadRequest(new ResponseServer
+                        {
+                            IsSuccess = false,
+                            StatusCode = HttpStatusCode.BadRequest,
+                            ErrorMessages = { "Несоответствие модели данных" }
+                        });
+                    }
+                    else
+                    {
+                        Product productFromDb = await dbContext
+                            .Products
+                            .FindAsync(id);
+
+                        if (productFromDb == null)
+                        {
+                            return NotFound(new ResponseServer
+                            {
+                                IsSuccess = false,
+                                StatusCode = HttpStatusCode.NotFound,
+                                ErrorMessages = { "Продукт с таким id не найден" }
+                            });
+                        }
+
+                        productFromDb.Name = productUpdateDto.Name;
+                        productFromDb.Description = productUpdateDto.Description;
+                        productFromDb.SpecialTag = productUpdateDto.SpecialTag ?? productFromDb.SpecialTag;
+                        productFromDb.Category = productUpdateDto.Category ?? productFromDb.Category;
+                        productFromDb.Price = productUpdateDto.Price;
+
+                        if (productUpdateDto.Image != null && productUpdateDto.Image.Length > 0)
+                        {
+                            productFromDb.Image = $"https://placehold.co/300";
+                        }
+
+                        dbContext.Products.Update(productFromDb);
+                        await dbContext.SaveChangesAsync();
+
+                        return Ok(new ResponseServer
+                        {
+                            StatusCode = HttpStatusCode.OK,
+                            Result = productFromDb
+                        });
+                    }
+                }
+                else
+                {
+                    return BadRequest(new ResponseServer
+                    {
+                        IsSuccess = false,
+                        StatusCode = HttpStatusCode.BadRequest,
+                        ErrorMessages = { "Модель данных не подходит" }
+                    });
+                }
+           }
+           catch (Exception ex)
+           {
+                return BadRequest(new ResponseServer
+                {
+                    IsSuccess = false,
+                    StatusCode = HttpStatusCode.BadRequest,
+                    ErrorMessages = { "Что-то пошло не так", ex.Message }
+                });
+           }
         }
     }
 }
