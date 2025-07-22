@@ -33,7 +33,7 @@ namespace Api.Controller
                 {
                     StatusCode = HttpStatusCode.BadRequest,
                     IsSuccess = false,
-                    ErrorMessages = { "Недопустимый id" }
+                    ErrorMessages = { "Неверный id" }
                 });
             }
 
@@ -126,8 +126,8 @@ namespace Api.Controller
         int id, [FromBody] ProductUpdateDto productUpdateDto
         )
         {
-           try
-           {
+            try
+            {
                 if (ModelState.IsValid)
                 {
                     if (productUpdateDto == null || productUpdateDto.Id != id)
@@ -185,16 +185,62 @@ namespace Api.Controller
                         ErrorMessages = { "Модель данных не подходит" }
                     });
                 }
-           }
-           catch (Exception ex)
-           {
+            }
+            catch (Exception ex)
+            {
                 return BadRequest(new ResponseServer
                 {
                     IsSuccess = false,
                     StatusCode = HttpStatusCode.BadRequest,
                     ErrorMessages = { "Что-то пошло не так", ex.Message }
                 });
-           }
+            }
+        }
+        [HttpDelete]
+        public async Task<ActionResult<ResponseServer>> RemoveProductById(int id)
+        {
+            try
+            {
+                if (id <= 0)
+                {
+                    return BadRequest(new ResponseServer
+                    {
+                        IsSuccess = false,
+                        StatusCode = HttpStatusCode.BadRequest,
+                        ErrorMessages = { "Неверный id" }
+                    });
+                }
+
+                Product productFromDb = await dbContext.Products.FindAsync(id);
+
+                if (productFromDb == null)
+                {
+                    return NotFound(new ResponseServer
+                    {
+                        IsSuccess = false,
+                        StatusCode = HttpStatusCode.NotFound,
+                        ErrorMessages = { "Продукт с таким id не найден" }
+                    });
+                }
+
+                dbContext.Products.Remove(productFromDb);
+                await dbContext.SaveChangesAsync();
+
+                return Ok(new ResponseServer
+                {
+                    IsSuccess = true,
+                    StatusCode = HttpStatusCode.NoContent,
+                });
+            }
+            catch (Exception ex)
+            {
+               return BadRequest(new ResponseServer
+               {
+                   IsSuccess = false,
+                   StatusCode = HttpStatusCode.BadRequest,
+                   ErrorMessages = { "Что-то пошло не так", ex.Message }
+                });
+            }
         }
     }
 }
